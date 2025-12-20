@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor.Animations;
 using UnityEditor.Timeline;
 using UnityEngine;
 
@@ -8,16 +9,21 @@ public class MatchableGrid : GridSystem<Matchable>
 {
     private MatchablePool pool;
     private ScoreManager scoreManager;
-
+    private HintIndicator indicator;
+    private Cursor cursor;
 
     private Vector3 onScreenPosition;
 
     [SerializeField] private Vector3 offSetScreen;
+    private List<Matchable> possibleMatches;
+
 
     private void Start()
     {
         pool = (MatchablePool)MatchablePool.Instance;
         scoreManager = ScoreManager.Instance;
+        indicator=HintIndicator.Instance;
+        cursor = Cursor.Instance;
     }
     public IEnumerator PopulateGrid(bool allowMatches = false, bool initialPopulation = false)
     {
@@ -46,8 +52,6 @@ public class MatchableGrid : GridSystem<Matchable>
                     }
                     AddDataToGrid(matchable, j, i);
                     newMatchables.Add(matchable);
-                    //StartCoroutine(matchable.MoveCoroutine(onScreenPosition));
-                    yield return null;
                 }
             }
         }
@@ -85,7 +89,6 @@ public class MatchableGrid : GridSystem<Matchable>
 
         return false;
     }
-
     private int CountMatchesInDirection(Matchable matchable, Vector2Int direction)
     {
         Vector2Int position = matchable.position + direction;
@@ -104,7 +107,9 @@ public class MatchableGrid : GridSystem<Matchable>
         copies[0] = toBeSwapped[0];
         copies[1] = toBeSwapped[1];
 
+        indicator.CancelHint();
         yield return StartCoroutine(Swap(copies));
+        cursor.DisableCursor();
         if (copies[0].IsGem && copies[1].IsGem)
         {
             MatchEveryThing();
@@ -112,12 +117,12 @@ public class MatchableGrid : GridSystem<Matchable>
         }
         if (copies[0].IsGem)
         {
-            MatchEveryThingByType(copies[0],copies[1].Type);
+            MatchEveryThingByType(copies[0], copies[1].Type);
             yield break;
         }
         if (copies[1].IsGem)
         {
-            MatchEveryThingByType(copies[1],copies[0].Type);
+            MatchEveryThingByType(copies[1], copies[0].Type);
             yield break;
         }
 
@@ -151,22 +156,22 @@ public class MatchableGrid : GridSystem<Matchable>
         yield return null;
     }
 
-    private void MatchEveryThingByType(Matchable gem,int type)
+    private void MatchEveryThingByType(Matchable gem, int type)
     {
-        Match everythingSame = new();
+        Match everythingSame = new(gem);
         for (int i = 0; i < dimensions.y; i++)
         {
             for (int j = 0; j < dimensions.x; j++)
             {
                 if (CheckBounds(j, i) && !IsEmpty(j, i) && GetData(j, i).Idle && type == GetData(j, i).Type)
-                        everythingSame.AddtoMatchables(GetData(j, i));
+                    everythingSame.AddtoMatchables(GetData(j, i));
             }
         }
         StartCoroutine(scoreManager.ResolveMatch(everythingSame, MatchType.match5));
         StartCoroutine(FindAndScanGrid());
     }
 
-    private void MatchEveryThing()
+    public void MatchEveryThing()
     {
         Match everyThing = new();
         for (int i = 0; i < dimensions.y; i++)
@@ -189,6 +194,41 @@ public class MatchableGrid : GridSystem<Matchable>
         {
             StartCoroutine(FindAndScanGrid());
         }
+        else
+        {
+            CheckPossibleMoves();
+        }
+    }
+    public void CheckPossibleMoves()
+    {
+        if (ScanForMoves() == 0)
+        {
+            GameManager.Instance.NoMovesAvailable();
+        }
+        else
+        {
+            ShowHint();
+        }
+    }
+
+    string PrintTable()
+    {
+        string s = "";
+        for (int i = 0; i < dimensions.y; i++)
+        {
+            s += "[";
+            for (int j = 0; j < dimensions.x; j++)
+            {
+                if (IsEmpty(j, i))
+                    s += "X";
+                else
+                    s += GetData(j,i).Type.ToString();
+
+                s += ",";
+            }
+            s += "]\n";
+        }
+        return s;
     }
 
     private bool ScanGridForMatch()
@@ -337,8 +377,8 @@ public class MatchableGrid : GridSystem<Matchable>
         worldPosition[0] = toBeSwapped[0].transform.position;
         worldPosition[1] = toBeSwapped[1].transform.position;
 
-        StartCoroutine(toBeSwapped[0].MoveCoroutine(worldPosition[1]));
-        yield return StartCoroutine(toBeSwapped[1].MoveCoroutine(worldPosition[0]));
+        StartCoroutine(toBeSwapped[0].MoveCoroutine(worldPosition[1],3));
+        yield return StartCoroutine(toBeSwapped[1].MoveCoroutine(worldPosition[0],3));
     }
 
     public void MatchAllAdjacent(Matchable powerUp)
@@ -354,7 +394,7 @@ public class MatchableGrid : GridSystem<Matchable>
                 }
             }
         }
-        StartCoroutine(scoreManager.ResolveMatch(allAdjacent, MatchType.match4));
+        StartCoroutine(scoreManager.ResolveMatch(allAdjacent, MatchType.crossMatch));
     }
 
     public void MatchRowAndColumn(Matchable powerUp)
@@ -372,7 +412,88 @@ public class MatchableGrid : GridSystem<Matchable>
                 allRowAndColumn.AddtoMatchables(GetData(i, powerUp.position.y));
             }
         }
-        StartCoroutine(scoreManager.ResolveMatch(allRowAndColumn, MatchType.crossMatch));
+        StartCoroutine(scoreManager.ResolveMatch(allRowAndColumn, MatchType.match4));
     }
 
+    private int ScanForMoves()
+    {
+        possibleMatches = new List<Matchable>();
+        for (int i = 0; i < dimensions.y; i++)
+        {
+            for (int j = 0; j < dimensions.x; j++)
+            {
+                if (CheckBounds(j, i) && !IsEmpty(j, i) && CanMove(GetData(j, i)))
+                {
+                    possibleMatches.Add(GetData(j, i));
+                }
+            }
+        }
+
+        return possibleMatches.Count;
+    }
+    private bool CanMove(Matchable matchable)
+    {
+        if (CanMove(matchable, Vector2Int.up)
+            || CanMove(matchable, Vector2Int.down)
+            || CanMove(matchable, Vector2Int.left)
+            || CanMove(matchable, Vector2Int.right))
+        {
+            return true;
+        }
+        if (matchable.IsGem) return true;
+
+        return false;
+    }
+    private bool CanMove(Matchable matchable, Vector2Int direction)
+    {
+        Vector2Int pos1 = matchable.position + direction * 2
+            , pos2 = matchable.position + direction * 3;
+
+        if (IsPotentialMatch(matchable, pos1, pos2))
+            return true;
+
+
+        Vector2Int cw = new Vector2Int(direction.y, -direction.x);
+        Vector2Int ccw = new Vector2Int(-direction.y, direction.x);
+
+        pos1 = matchable.position + direction + cw;
+        pos2 = matchable.position + direction + cw * 2;
+
+        if (IsPotentialMatch(matchable, pos1, pos2))
+            return true;
+        
+
+        pos2 = matchable.position + direction + ccw;
+        if (IsPotentialMatch(matchable, pos1, pos2))
+            return true;
+
+        pos1 = matchable.position + direction + ccw * 2;
+
+        if (IsPotentialMatch(matchable, pos1, pos2))
+            return true;
+
+        return false;
+    }
+    private bool IsPotentialMatch(Matchable matchable, Vector2Int pos1, Vector2Int pos2)
+    {
+        if (CheckBounds(pos1)
+            && CheckBounds(pos2)
+            && !IsEmpty(pos1)
+            && !IsEmpty(pos2)
+            && GetData(pos1).Idle
+            && GetData(pos2).Idle
+            && (GetData(pos1).Type == matchable.Type)
+            && (GetData(pos2).Type == matchable.Type))
+        {
+            return true;
+        }
+
+
+        return false;
+    }
+
+    public void ShowHint()
+    {
+        indicator.StartAutoHint(possibleMatches[UnityEngine.Random.Range(0, possibleMatches.Count)].transform);
+    }
 }
