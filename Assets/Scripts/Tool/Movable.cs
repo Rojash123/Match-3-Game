@@ -10,7 +10,7 @@ public class Movable : MonoBehaviour
     [SerializeField]
     private float speed=1;
 
-    private bool idle;
+    protected bool idle=true;
     public bool Idle
     {
         get
@@ -38,5 +38,23 @@ public class Movable : MonoBehaviour
     private float Easing(float t)
     {
         return t*t;
+    }
+
+    public IEnumerator MoveCoroutine(Transform targetTransform)
+    {
+        from = transform.position;
+        to = targetTransform.position;
+        howFar = 0;
+        idle = false;
+        do
+        {
+            howFar += speed * Time.deltaTime;
+            if (howFar > 1) howFar = 1;
+            to = targetTransform.position;
+            transform.position = Vector3.LerpUnclamped(from, to, Easing(howFar));
+            yield return null;
+        }
+        while (howFar != 1);
+        idle = true;
     }
 }

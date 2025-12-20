@@ -71,6 +71,23 @@ public abstract class GridSystem<T> : Singleton<GridSystem<T>>
         return AddDataToGrid(item, dimensions.x, dimensions.y, allowOverWrite);
     }
 
+    public bool MoveItemTo(int x1,int y1, int x2, int y2, bool allowOverWrite = false)
+    {
+        if (!CheckBounds(x1, y1)||!CheckBounds(x2,y2))
+            Debug.Log("not in the grid");
+
+        if (!allowOverWrite && !IsEmpty(x2, y2))
+        {
+            return false;
+        }
+        data[x2,y2]= RemoveDataFromGrid(x1, y1);
+        return true;
+    }
+    public bool MoveItemTo(Vector2Int initalPos, Vector2Int finalPos, bool allowOverWrite = false)
+    {
+        return MoveItemTo(initalPos.x, initalPos.y, finalPos.x, finalPos.y);
+    }
+
     public T GetData(int x, int y)
     {
         if (!CheckBounds(x, y))
@@ -102,8 +119,8 @@ public abstract class GridSystem<T> : Singleton<GridSystem<T>>
             Debug.Log("not in the grid");
 
         T temp= data[x1, y1];
-        data[x2, y2] = data[x1, y1];
-        data[x1, y1] = temp;
+        data[x1, y1] = data[x2, y2];
+        data[x2, y2] = temp;
     }
     public void SwapItem(Vector2Int firstPos, Vector2Int secondPos)
     {
