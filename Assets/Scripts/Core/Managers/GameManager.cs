@@ -21,6 +21,6 @@ public class GameManager : Singleton<GameManager>
         pool.PoolObjects(dimension.x*dimension.y*2);
         grid.Initialize(dimension);
         yield return null;
-        StartCoroutine(grid.PopulateGrid());
+        StartCoroutine(grid.PopulateGrid(false,true));
     }
 }

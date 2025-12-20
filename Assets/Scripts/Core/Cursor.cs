@@ -4,6 +4,11 @@ using UnityEngine;
 [RequireComponent(typeof(SpriteRenderer))]
 public class Cursor : Singleton<Cursor>
 {
+    public bool cheatMode;
+
+    private MatchableGrid grid;
+    private MatchablePool pool;
+
     private SpriteRenderer spriteRenderer;
     private Matchable[] selected;
 
@@ -15,6 +20,19 @@ public class Cursor : Singleton<Cursor>
         spriteRenderer = GetComponent<SpriteRenderer>();
         spriteRenderer.enabled = false;
         selected = new Matchable[2];
+    }
+    private void Start()
+    {
+        grid = (MatchableGrid)MatchableGrid.Instance;
+        pool=(MatchablePool)MatchablePool.Instance;
+    }
+    private void Update()
+    {
+        if (!cheatMode || selected[0] == null)
+            return;
+
+        if (Input.GetKeyDown(KeyCode.Space))
+            pool.ChangeType(selected[0], 0);
     }
 
     public void SelectFirstMatchable(Matchable matchable)
@@ -29,8 +47,10 @@ public class Cursor : Singleton<Cursor>
     {
         selected[1] = matchable;
         if (!enabled || selected[0] == null || selected[1] == null || !selected[0].Idle || !selected[1].Idle || selected[0] == selected[1]) return;
+
         if (!selectedAdjacent()) return;
 
+        StartCoroutine(grid.TrySwap(selected));
         selected[0] = null;
     }
 
