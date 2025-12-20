@@ -11,7 +11,7 @@ public class Matchable : Movable
     private SpriteRenderer spriteRenderer;
     private int type;
     private Cursor cursor;
-    private MatchType powerUpType=MatchType.none;
+    private MatchType powerUpType = MatchType.none;
 
     public bool IsGem
     {
@@ -51,28 +51,28 @@ public class Matchable : Movable
         cursor.SelectSecondMatchable(this);
     }
 
-    public void SetData(int type, Sprite sprite, Color color)
+    public void SetData(int type, Sprite sprite)
     {
         this.type = type;
         spriteRenderer.sprite = sprite;
-        spriteRenderer.color = color;
     }
     public IEnumerator Resolve(Transform collectPoint)
     {
-        if (powerUpType != MatchType.none) 
+        if (powerUpType != MatchType.none)
         {
-            if(powerUpType == MatchType.match4)
+            if (powerUpType == MatchType.match4)
             {
-                grid.MatchAllAdjacent(this);
+                grid.MatchRowAndColumn(this);
             }
 
             if (powerUpType == MatchType.match5)
             {
+
             }
 
             if (powerUpType == MatchType.crossMatch)
             {
-                grid.MatchRowAndColumn(this);
+                grid.MatchAllAdjacent(this);
             }
             powerUpType = MatchType.none;
         }
@@ -81,13 +81,15 @@ public class Matchable : Movable
             yield break;
         }
 
-        spriteRenderer.sortingOrder = 2;
-        yield return StartCoroutine(MoveCoroutine(collectPoint));
+        spriteRenderer.sortingOrder = 3;
+        yield return StartCoroutine(MoveCoroutine(collectPoint, 3));
+        transform.GetChild(0).gameObject.SetActive(false);
+
         spriteRenderer.sortingOrder = 1;
         pool.ReturnToPool(this);
     }
 
-    public Matchable Upgrade(Sprite match4powerup,MatchType type)
+    public Matchable Upgrade(Sprite match4powerup, MatchType type)
     {
         if (type != MatchType.none)
         {
@@ -95,14 +97,21 @@ public class Matchable : Movable
             StartCoroutine(Resolve(null));
             idle = true;
         }
-
         powerUpType = type;
         if (powerUpType == MatchType.match5)
         {
             this.type = -1;
-            spriteRenderer.color=Color.white;
+            spriteRenderer.color = Color.white;
         }
-        spriteRenderer.sprite = match4powerup;
+        if (powerUpType == MatchType.crossMatch)
+        {
+            transform.GetChild(0).gameObject.SetActive(true);
+        }
+        else
+        {
+            transform.GetChild(0).gameObject.SetActive(false);
+            spriteRenderer.sprite = match4powerup;
+        }
         return this;
     }
 }

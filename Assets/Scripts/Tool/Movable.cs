@@ -18,7 +18,7 @@ public class Movable : MonoBehaviour
             return idle;
         }
     }
-    public IEnumerator MoveCoroutine(Vector3 targetPosition)
+    public IEnumerator MoveCoroutine(Vector3 targetPosition,float speedMultiplier=1)
     {
         from=transform.position;
         to= targetPosition;
@@ -26,7 +26,7 @@ public class Movable : MonoBehaviour
         idle = false;
         do
         {
-            howFar+=speed*Time.deltaTime;
+            howFar+=speed*Time.deltaTime*speedMultiplier;
             if (howFar > 1) howFar = 1;
             transform.position=Vector3.LerpUnclamped(from, to, Easing(howFar));
             yield return null;
@@ -34,13 +34,11 @@ public class Movable : MonoBehaviour
         while (howFar!=1) ;
         idle = true;
     }
-
     private float Easing(float t)
     {
         return t*t;
     }
-
-    public IEnumerator MoveCoroutine(Transform targetTransform)
+    public IEnumerator MoveCoroutine(Transform targetTransform, float speedMultiplier = 1)
     {
         from = transform.position;
         to = targetTransform.position;
@@ -48,7 +46,7 @@ public class Movable : MonoBehaviour
         idle = false;
         do
         {
-            howFar += speed * Time.deltaTime;
+            howFar += speed * Time.deltaTime*speedMultiplier;
             if (howFar > 1) howFar = 1;
             to = targetTransform.position;
             transform.position = Vector3.LerpUnclamped(from, to, Easing(howFar));

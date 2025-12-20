@@ -2,6 +2,7 @@ using NUnit.Framework.Constraints;
 using System;
 using System.Collections;
 using System.Runtime.CompilerServices;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -14,7 +15,7 @@ public class ScoreManager : Singleton<ScoreManager>
     private MatchablePool pool;
 
     [SerializeField]
-    private Text scoreText,
+    private TextMeshProUGUI scoreText,
                  comboText;
 
     private int score;
@@ -31,7 +32,7 @@ public class ScoreManager : Singleton<ScoreManager>
     }
     protected override void Init()
     {
-        scoreText = GetComponent<Text>();
+        scoreText = GetComponent<TextMeshProUGUI>();
     }
     private void Start()
     {
@@ -40,22 +41,21 @@ public class ScoreManager : Singleton<ScoreManager>
     }
     public void AddScore(int score)
     {
-        this.score += score*IncreaseCombo();
-        scoreText.text = $"Score:{score}";
-        comboText.text = $"Combo X{comboMultiplier}";
+        int combo = IncreaseCombo();
+        this.score += score*combo;
+        scoreText.text = $"Score:\n{this.score}";
+        comboText.text = $"Combo X {comboMultiplier}";
     }
 
     private int IncreaseCombo()
     {
         lastTimeCombo = 0;
-        comboMultiplier++;
-
         comboDuration =maxComboDuration-Mathf.Log(comboMultiplier);
         
         if (!isComboActive)
             StartCoroutine(ComboTimer());
 
-        return comboMultiplier;
+        return ++comboMultiplier;
     }
 
     IEnumerator ComboTimer()
@@ -72,7 +72,6 @@ public class ScoreManager : Singleton<ScoreManager>
 
         comboSlider.gameObject.SetActive(false);
         comboMultiplier = 0;
-
         isComboActive = false;
     }
 
@@ -89,7 +88,7 @@ public class ScoreManager : Singleton<ScoreManager>
             powerup = pool.UpgradeMatchable(matches.GetToBeUpgradedMatchable(), matches.Type);
             matches.Remove(powerup);
             target = powerup.transform;
-            powerup.SortingOrder = 3;
+            powerup.SortingOrder = 5;
         }
 
         for (int i = 0; i < matches.Count; ++i)
@@ -113,8 +112,7 @@ public class ScoreManager : Singleton<ScoreManager>
         AddScore(matches.Count * matches.Count);
 
         if (powerup != null)
-            powerup.SortingOrder = 0;
-
+            powerup.SortingOrder = 1;
 
         yield return null;
     }

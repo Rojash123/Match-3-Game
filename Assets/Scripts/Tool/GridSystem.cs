@@ -138,7 +138,7 @@ public abstract class GridSystem<T> : Singleton<GridSystem<T>>
                 if (IsEmpty(i, j))
                     s += "X";
                 else 
-                    s += data[i,j].ToString();
+                    s += data[i,j];
 
                 s+= ",";
             }

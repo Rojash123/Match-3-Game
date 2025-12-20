@@ -89,4 +89,9 @@ public class Cursor : Singleton<Cursor>
 
         return false;
     }
+    public void DisableCursor()
+    {
+        spriteRenderer.enabled = false;
+        spriteRenderer.size = Vector2.one;
+    }
 }
